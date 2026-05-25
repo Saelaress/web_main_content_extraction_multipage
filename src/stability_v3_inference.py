@@ -662,7 +662,9 @@ def _output_path_for(args, html_path: Path, fmt: str, multi: bool) -> Path | Non
         # output должен быть директорией
         args.output.mkdir(parents=True, exist_ok=True)
         return args.output / (html_path.stem + suffix)
-    # single file mode — args.output это файл
+    # single file mode — args.output это файл; создаём родительскую папку при необходимости
+    if args.output.parent and not args.output.parent.exists():
+        args.output.parent.mkdir(parents=True, exist_ok=True)
     return args.output
 
 
