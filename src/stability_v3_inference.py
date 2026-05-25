@@ -590,6 +590,17 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--max-siblings",
+        type=int,
+        default=None,
+        metavar="N",
+        help=(
+            "Ограничить число используемых соседей (берутся первые N по имени файла). "
+            "По умолчанию — без ограничения (все .html из --siblings-dir). "
+            "Для эталонной by1-конфигурации (test_f1_main = 0.7696) укажите --max-siblings 1."
+        ),
+    )
+    parser.add_argument(
         "--model",
         type=Path,
         default=None,
@@ -714,6 +725,14 @@ def main() -> None:
             f"[stability_v3_inference] WARNING: --siblings-dir не найден: {args.siblings_dir}",
             file=sys.stderr,
         )
+    # Ограничение числа соседей (например, --max-siblings 1 для by1-конфигурации).
+    if args.max_siblings is not None and len(sibling_htmls) > args.max_siblings:
+        print(
+            f"[stability_v3_inference] соседей ограничено до {args.max_siblings} "
+            f"(из {len(sibling_htmls)} найденных).",
+            file=sys.stderr,
+        )
+        sibling_htmls = sibling_htmls[:args.max_siblings]
 
     for html_file_str in args.html_files:
         html_path = Path(html_file_str)
