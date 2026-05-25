@@ -1,0 +1,33 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+
+# --- Виртуальное окружение ---
+venv/
+.venv/
+env/
+
+# --- FastText (7.2 ГБ — скачивается через download_fasttext.py) ---
+models/cc.*.300.bin
+models/cc.*.300.bin.gz
+
+# --- Артефакты инференса ---
+output/
+*_labeled.html
+*_main.txt
+*_predictions.json
+
+# --- IDE ---
+.idea/
+.vscode/
+*.swp
+
+# --- OS ---
+.DS_Store
+Thumbs.db
