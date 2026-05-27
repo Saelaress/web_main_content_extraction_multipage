@@ -679,7 +679,22 @@ def _output_path_for(args, html_path: Path, fmt: str, multi: bool) -> Path | Non
     return args.output
 
 
+def _force_utf8_streams() -> None:
+    """
+    Переключаем stdout/stderr на utf-8 с errors='replace',
+    чтобы вывод в консоль работал независимо от локали ОС.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            try:
+                reconfigure(encoding="utf-8", errors="replace")
+            except (ValueError, OSError):
+                pass
+
+
 def main() -> None:
+    _force_utf8_streams()
     parser = _build_parser()
     args = parser.parse_args()
 
@@ -688,6 +703,13 @@ def main() -> None:
     scaler_stab_path = args.scaler_stab
     fmt = args.format
     multi = len(args.html_files) > 1
+
+    # Проверка существования входных файлов выполняется ПЕРВОЙ — до загрузки
+    missing = [f for f in args.html_files if not Path(f).is_file()]
+    if missing:
+        for f in missing:
+            print(f"[stability_v3_inference] ERROR: файл не найден: {f}", file=sys.stderr)
+        sys.exit(1)
 
     if multi and args.output is None:
         print(
