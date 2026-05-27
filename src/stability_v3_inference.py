@@ -18,7 +18,6 @@
     --argmax              Использовать argmax (0.5/0.5) вместо лучших порогов.
     --output FILE         Путь к выходному файлу (по умолчанию: stdout)
     --encoding ENC        Кодировка HTML-файлов (по умолчанию: utf-8)
-    --device DEVICE       Устройство для инференса: cpu/cuda (по умолчанию: авто)
 
 Замечания:
   * stab-фичи вычисляются через htmldiff между основной страницей и sibling-страницами.
@@ -434,7 +433,7 @@ def predict_labels_for_html_path(
                                           Если оба None — argmax (thr=0.5/0.5).
     """
     if device is None:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        device = torch.device("cpu")
 
     if model_path is None:
         model_path = MODELS_DIR / V3_WEAK_MODEL_FILE
@@ -658,8 +657,6 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--encoding", default="utf-8", metavar="ENC",
                         help="Кодировка HTML-файлов (по умолчанию: utf-8)")
-    parser.add_argument("--device", default=None, metavar="DEVICE",
-                        help="Устройство: cpu / cuda (по умолчанию: авто)")
     return parser
 
 
@@ -698,7 +695,6 @@ def main() -> None:
     parser = _build_parser()
     args = parser.parse_args()
 
-    device = torch.device(args.device) if args.device else None
     model_path = args.model
     scaler_stab_path = args.scaler_stab
     fmt = args.format
@@ -771,7 +767,6 @@ def main() -> None:
                 model_path=model_path,
                 scaler_stab_path=scaler_stab_path,
                 encoding=args.encoding,
-                device=device,
                 thr_with_signal=thr_with,
                 thr_no_signal=thr_no,
                 return_elements=True,
