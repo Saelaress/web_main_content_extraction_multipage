@@ -78,10 +78,29 @@ V3_WEAK_THR_NO_SIGNAL   = 0.75
 # Кэшированная загрузка ресурсов
 # ---------------------------------------------------------------------------
 
+def _fasttext_safe_path(path: str) -> str:
+    """
+    На Windows fasttext (C++ std::ifstream) не открывает Unicode-пути.
+    Если в пути есть не-ASCII символы (например, кириллица в "Мои файлы"),
+    преобразуем в 8.3 short path через WinAPI.
+    """
+    if sys.platform != "win32" or path.isascii():
+        return path
+    import ctypes  # noqa: PLC0415
+    from ctypes import wintypes  # noqa: PLC0415
+    GetShortPathNameW = ctypes.windll.kernel32.GetShortPathNameW
+    GetShortPathNameW.argtypes = [wintypes.LPCWSTR, wintypes.LPWSTR, wintypes.DWORD]
+    GetShortPathNameW.restype = wintypes.DWORD
+    buf = ctypes.create_unicode_buffer(512)
+    if GetShortPathNameW(path, buf, 512) and buf.value:
+        return buf.value
+    return path
+
+
 @lru_cache(maxsize=1)
 def _load_fasttext_cached(path: str):
     import fasttext
-    return fasttext.load_model(path)
+    return fasttext.load_model(_fasttext_safe_path(path))
 
 
 @lru_cache(maxsize=4)
@@ -171,14 +190,15 @@ def _get_model_and_preprocessors(model_path: Path, device: torch.device):
         "hidden_dim": hidden_dim,
         "num_layers": num_layers,
     }
-    # FastText путь: сначала пробуем то, что было записано в preprocessors при обучении;
-    # если такого файла нет на текущей машине — берём из локального config.FASTTEXT_MODEL_PATH
-    # (см. download_fasttext.py). Это позволяет переносить test_diplom между машинами.
-    ft_path_str = prep.get("fasttext_path", "")
-    if not ft_path_str or not Path(ft_path_str).is_file():
-        from config import FASTTEXT_MODEL_PATH  # noqa: PLC0415
-        if FASTTEXT_MODEL_PATH and Path(FASTTEXT_MODEL_PATH).is_file():
-            ft_path_str = str(FASTTEXT_MODEL_PATH)
+    # FastText путь: используем ТОЛЬКО локальную модель из репозитория
+    from config import FASTTEXT_MODEL_PATH  # noqa: PLC0415
+    if not FASTTEXT_MODEL_PATH or not Path(FASTTEXT_MODEL_PATH).is_file():
+        raise FileNotFoundError(
+            "FastText модель не найдена. Ожидается models/cc.en.300.bin "
+            "(или cc.xx.300.bin), либо путь в переменной окружения FASTTEXT_MODEL_PATH. "
+            "Запустите src/download_fasttext.py для загрузки."
+        )
+    ft_path_str = str(FASTTEXT_MODEL_PATH)
     return model, prep, ft_path_str, meta
 
 
